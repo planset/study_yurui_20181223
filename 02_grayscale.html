@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>02 画像を読み込んで白黒にする - OpenCV.js Samples -</title>
+</head>
+
+<body>
+    <h2>02 画像を読み込んでグレースケールにする</h2>
+
+    <p id="status">OpenCV.js is loading...</p>
+
+    <div>
+        <form name="test">
+            <input type="button" value="グレースケールにする" onClick="grayscale()">
+            <br>
+        </form>
+        <table>
+            <tr>
+                <td>
+                    元の画像
+                </td>
+                <td>
+                    変換後の画像
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="inputoutput">
+                        <img id="imageSrc" src="./img/sample.png" />
+                    </div>
+                </td>
+                <td>
+
+                    <div class="inputoutput">
+                        <canvas id="canvasOutput"></canvas>
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <script type="text/javascript">
+        let imageElementId= 'imageSrc';
+        let outputCanvasId = 'canvasOutput';
+
+        let grayscale = function () {
+            let srcImage = cv.imread(imageElementId);
+            let destImage = new cv.Mat();
+            cv.cvtColor(srcImage, destImage, cv.COLOR_RGBA2GRAY, 0);
+            cv.imshow(outputCanvasId, destImage);
+            srcImage.delete();
+            destImage.delete();
+        }
+        let onOpenCvReady = function () {
+            document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
+        }
+    </script>
+    <script async src="./lib/build_wasm/opencv.js" type="text/javascript" onload="onOpenCvReady();"></script>
+
+</body>
+
+</html>

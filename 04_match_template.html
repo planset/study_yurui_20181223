@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>04 画像の中からテンプレート画像を探す - OpenCV.js Samples -</title>
+</head>
+
+<body>
+    <h2>04 画像の中からテンプレート画像を探す</h2>
+
+    <div>
+        <input type="button" value="match template" id="startButton">
+        <input type="button" value="clear" id="clearButton">
+    </div>
+    <div>
+        <div class="inputoutput">
+            <img id="imageSrc" src="./img/sample.png" />
+            <img id="templateSrc" src="./img/template.png" />
+            <input type="file" id="inputTemplateFile"/>
+        </div>
+        <div>
+            <canvas id="canvasOutput"></canvas>
+            <div class="caption">canvasOutput</div>
+        </div>
+    </div>
+    <div id="errorMessage"></div>
+
+
+    <script type="text/javascript" src="./utils.js"></script>
+    <script type="text/javascript">
+        let utils = new Utils('errorMessage');
+
+        let startButton = document.getElementById('startButton');
+        startButton.setAttribute('disabled', 'disabled');
+        startButton.addEventListener('click', () => {
+            matchTemplate();
+        });
+
+        let clearButton = document.getElementById('clearButton');
+        clearButton.setAttribute('disabled', 'disabled');
+        clearButton.addEventListener('click', () => {
+            clearCanvas('canvasOutput');
+        });
+
+        let templateImageElement = document.getElementById('templateSrc');
+        let inputTemplateFileElement = document.getElementById('inputTemplateFile');
+        inputTemplateFileElement.addEventListener('change', (e) => {
+            templateImageElement.src = URL.createObjectURL(e.target.files[0]);
+        }, false);
+
+        function clearCanvas(id){
+            let canvas = document.getElementById(id);
+            let ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function matchTemplate() {
+
+            let baseImage = cv.imread('imageSrc');
+            let templateImage = cv.imread('templateSrc');
+            let mask = new cv.Mat();
+            let dst = new cv.Mat();
+
+            try {
+                cv.matchTemplate(baseImage, templateImage, dst, cv.TM_CCOEFF_NORMED, mask);
+
+                let result = cv.minMaxLoc(dst, mask);
+                let maxPoint = result.maxLoc;
+
+                let color = new cv.Scalar(255, 0, 0, 255);
+                let point = new cv.Point(
+                    maxPoint.x + templateImage.cols, 
+                    maxPoint.y + templateImage.rows);
+                cv.rectangle(baseImage, maxPoint, point, color, 2, cv.LINE_8, 0);
+
+                cv.imshow('canvasOutput', baseImage);
+
+            } finally {
+                dst.delete();
+                mask.delete();
+                templateImage.delete();
+                baseImage.delete();
+            }
+
+        }
+
+        utils.loadOpenCv(() => {
+            startButton.removeAttribute('disabled');
+            clearButton.removeAttribute('disabled');
+        });
+    </script>
+</body>
+
+</html>

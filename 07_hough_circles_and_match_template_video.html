@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>07 カメラの映像から標識を見つける - OpenCV.js Samples -</title>
+</head>
+
+<body>
+    <h2>07 カメラの映像から標識を見つける</h2>
+
+    <div>
+        対象:
+        <table>
+            <tr>
+                <td><img id="sign01" src="img/sign/01_通行止め.png" /></td>
+                <td><img id="sign02" src="img/sign/02_車両進入禁止.png" /></td>
+                <td><img id="sign03" src="img/sign/03_二輪の自動車・原動機付自転車通行止め.png" /></td>
+                <td><img id="sign04" src="img/sign/04_自動二輪車二人乗り禁止.png" /></td>
+            </tr>
+        </table>
+    </div>
+
+    <div>
+        <div class="control"><button id="startAndStop">Start</button></div>
+    </div>
+
+    <div>
+        <table cellpadding="0" cellspacing="0" width="0" border="0">
+            <tbody>
+                <tr>
+                    <td>
+                        <video id="videoInput" width="320" height="240"></video>
+                    </td>
+                    <td>
+                        <canvas id="canvasOutput" width="320" height="240"></canvas>
+                    </td>
+                    <td>
+                        <canvas id="canvasAnswer" width="100" height="100"></canvas>
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <div class="caption">videoInput</div>
+                    </td>
+                    <td>
+                        <div class="caption">canvasOutput</div>
+                    </td>
+                    <td>
+                        <div class="caption">canvasAnswer</div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <div id="errorMessage"></div>
+
+    <script type="text/javascript" src="./utils.js"></script>
+    <script type="text/javascript">
+        let utils = new Utils('errorMessage');
+
+        let streaming = false;
+        let videoInput = document.getElementById('videoInput');
+        let startAndStop = document.getElementById('startAndStop');
+        let canvasOutput = document.getElementById('canvasOutput');
+        let canvasAnswer = document.getElementById('canvasAnswer');
+
+        startAndStop.setAttribute('disabled', 'disabled');
+        startAndStop.addEventListener('click', () => {
+            if (!streaming) {
+                utils.clearError();
+                utils.startCamera('qvga', onVideoStarted, 'videoInput');
+            } else {
+                utils.stopCamera();
+                onVideoStopped();
+            }
+        });
+        function onVideoStarted() {
+            streaming = true;
+            startAndStop.innerText = 'Stop';
+            videoInput.width = videoInput.videoWidth;
+            videoInput.height = videoInput.videoHeight;
+            proc();
+        }
+        function onVideoStopped() {
+            streaming = false;
+            clearCanvas('canvasOutput');
+            clearCanvas('canvasAnswer');
+            startAndStop.innerText = 'Start';
+        }
+
+        utils.loadOpenCv(() => {
+            startAndStop.removeAttribute('disabled');
+        });
+
+        function clearCanvas(id){
+            let canvas = document.getElementById(id);
+            let ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function proc() {
+
+            // 切り抜く画像のサイズ
+            const dsize = new cv.Size(100, 100);
+
+            // HoughCircleesのパラメータ
+            const dp = 1;
+            const minDist = 50;
+            const param1 = 75;
+            const param2 = 50;
+            const minRadius = 40; // 320 x 240 に映し出される標識画像なので 半径 40～80（直径 80px ～160px）くらいの
+            const maxRadius = 80; // 標識を見つける
+            const threshold = 0.70; // 標識の一致レベル
+
+            // 対象画像を読み込み、100px x 100pxに変換
+            let targetImages = [
+                cv.imread('sign01'),
+                cv.imread('sign02'),
+                cv.imread('sign03'),
+                cv.imread('sign04'),
+            ];
+            for (let targetImage of targetImages){
+                cv.resize(targetImage, targetImage, dsize);
+            }
+
+            let video = document.getElementById('videoInput');
+            let src = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+            let cap = new cv.VideoCapture(video);
+
+            const FPS = 30;
+            function processVideo() {
+                try {
+                    if (!streaming) {
+                        // clean and stop.
+                        src.delete();
+                        for (let targetImage of targetImages){
+                            targetImage.delete();
+                        }
+                        return;
+                    }
+                    let begin = Date.now();
+
+                    // ビデオをキャプチャ
+                    cap.read(src);
+
+                    // 画像をコピーして
+                    let srcImage = src.clone();
+                    let displayImage = src.clone();
+                    let circlesMat = new cv.Mat();
+
+                    try {
+                        // グレースケールにして
+                        cv.cvtColor(srcImage, srcImage, cv.COLOR_RGBA2GRAY);
+
+                        // 円を検出する
+                        cv.HoughCircles(srcImage, circlesMat,
+                            cv.HOUGH_GRADIENT, dp, minDist,
+                            param1, param2, minRadius, maxRadius);
+
+                        // 円を見つけたら
+                        if (circlesMat.cols > 0){
+                            let i = 0;
+                            let x = circlesMat.data32F[i * 3];
+                            let y = circlesMat.data32F[i * 3 + 1];
+                            let radius = circlesMat.data32F[i * 3 + 2];
+
+                            // 表示用の画像(src)に円の線を描画
+                            let center = new cv.Point(x, y);
+                            cv.circle(displayImage, center, radius, [0, 255, 0, 255], 3);
+
+                            // 切り抜いて
+                            let rectCrop = new cv.Rect(x - radius, y - radius, radius * 2, radius * 2);
+                            let croppedImage = src.roi(rectCrop);
+                            try {
+                                // 100px x 100px に変換して
+                                cv.resize(croppedImage, croppedImage, dsize);
+
+                                // テンプレートマッチする
+                                let result = new cv.Mat();
+                                let mask = new cv.Mat();
+                                try {
+                                    let detectImage = null;
+                                    for (let targetImage of targetImages){
+                                        cv.matchTemplate(croppedImage, targetImage, result, cv.TM_CCOEFF_NORMED, mask);
+
+                                        // マッチしなかった
+                                        console.log(result.data32F.length);
+                                        if (result.data32F.length == 0) {
+                                            continue;
+                                        }
+                                        // 同じ大きさなので結果は１つだけ
+                                        console.log(result.data32F[0]);
+                                        if (result.data32F[0] > threshold) {
+                                            detectImage = targetImage;
+                                            break;
+                                        }
+                                    }
+                                    if (detectImage){
+                                        cv.imshow('canvasAnswer', detectImage);
+                                    } else {
+                                        //clearCanvas('canvasAnswer');
+                                    }
+                                } finally {
+                                    mask.delete();
+                                    result.delete();
+                                }
+
+                            } finally {
+                                croppedImage.delete();
+                            }
+
+                        }
+
+                        cv.imshow('canvasOutput', displayImage);
+
+                    } finally {
+                        circlesMat.delete();
+                        displayImage.delete();
+                        srcImage.delete();
+                    }
+
+                    // schedule the next one.
+                    let delay = 1000 / FPS - (Date.now() - begin);
+                    setTimeout(processVideo, delay);
+                } catch (err) {
+                    console.log(err);
+                }
+            };
+
+            setTimeout(processVideo, 0);
+        }
+
+    </script>
+
+</body>
+
+</html>

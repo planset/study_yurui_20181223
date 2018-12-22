@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>01 OpenCV.jsの使い方 - OpenCV.js Samples -</title>
+</head>
+
+<body>
+    <h2>01 OpenCV.jsの使い方</h2>
+    <p id="status">OpenCV.js is loading...</p>
+    <input type="button" value="グレースケールにする" onClick="grayscale()">
+    <img id="imageSrc" src="./img/sample.png" />
+    <canvas id="canvasOutput"></canvas>
+
+    <script type="text/javascript">
+        let grayscale = function () {
+            let srcImage = cv.imread('imageSrc'); // imageSrc = 元画像の id 
+            let destImage = new cv.Mat();
+            cv.cvtColor(srcImage, destImage, cv.COLOR_RGBA2GRAY, 0);
+            cv.imshow('canvasOutput', destImage);
+            // canvasOutput = 変換後の画像を描く場所の id
+            srcImage.delete();
+            destImage.delete();
+        }
+        let onOpenCvReady = function () {
+            document.getElementById('status').innerHTML = 'OpenCV.js is ready.';
+        }
+    </script>
+    <script async src="./lib/build_wasm/opencv.js" type="text/javascript" 
+            onload="onOpenCvReady();"></script>
+
+</body>
+
+</html>
