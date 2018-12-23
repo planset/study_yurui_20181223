@@ -2,7 +2,7 @@ function Utils(errorOutputId) { // eslint-disable-line no-unused-vars
     let self = this;
     this.errorOutput = document.getElementById(errorOutputId);
 
-    const OPENCV_URL = 'lib/build_wasm/opencv.js';
+    const OPENCV_URL = 'lib/opencv.js';
     this.loadOpenCv = function(onloadCallback) {
         let script = document.createElement('script');
         script.setAttribute('async', '');
