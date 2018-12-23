@@ -63,7 +63,9 @@
             let dst = new cv.Mat();
 
             try {
-                cv.matchTemplate(baseImage, templateImage, dst, cv.TM_CCOEFF_NORMED, mask);
+                cv.matchTemplate(
+                    baseImage, templateImage, dst, 
+                    cv.TM_CCOEFF_NORMED, mask);
 
                 let result = cv.minMaxLoc(dst, mask);
                 let maxPoint = result.maxLoc;
