@@ -137,6 +137,12 @@ python ./platforms/js/build_js.py build_js --disable_wasm
 ビルドオプションを見る限りは --build_wasmをつけたときが WebAssemblyで、つけないときが、asm.js、--disable_wasmをつけたときは
 
 
+# デモの実行
+
+* ファイルをそのまま実行しても動かない。
+* nodejsのhttp-serverなどでウェブサーバーを動かしてから利用する。
+
+
 
 # 参考
 
